@@ -42,7 +42,7 @@ if __name__ == '__main__':
     ##########
     # Parser #
     ##########
-    input_dir = './data/WebServer/'
+    input_dir = './data/OpenStack/'
     output_dir = './Result/'
     log_format = '<IP> - - [<Date>:<Time> <Timezone>] "<Request>" <Status> <Size> "<Referrer>" "<UserAgent>"'
     log_main = 'web_server'
