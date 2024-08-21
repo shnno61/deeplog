@@ -5,12 +5,17 @@ import logging
 import argparse
 from deeplog.deeplog import model_fn, input_fn, predict_fn
 
-
 logging.basicConfig(level=logging.WARNING,
                     format='[%(asctime)s][%(levelname)s]: %(message)s')
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
+def print_logs(filename, log_type):
+    """Function to print logs from a file."""
+    logger.info(f'\nPrinting {log_type} logs:')
+    with open(filename, 'r') as f:
+        for line in f:
+            logger.info(line.strip())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -25,7 +30,7 @@ if __name__ == '__main__':
     model_info = model_fn(model_dir)
 
     ###########
-    # predict #
+    # Predict #
     ###########
     test_abnormal_list = []
     with open('test_abnormal', 'r') as f:
@@ -96,3 +101,6 @@ if __name__ == '__main__':
     logger.info(f'Precision: {precision}')
     logger.info(f'Recall: {recall}')
     logger.info(f'F1: {F1}')
+
+    # Print the abnormal logs
+    print_logs('test_abnormal', 'abnormal')
