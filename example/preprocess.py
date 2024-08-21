@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import pandas as pd
+import re
 from spellpy import spell
 
 logging.basicConfig(level=logging.WARNING,
@@ -9,13 +10,20 @@ logging.basicConfig(level=logging.WARNING,
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
-
 def deeplog_df_transfer(df, event_id_map):
-    df['datetime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
+    # Convert 'datetime' column to datetime type
+    df['datetime'] = pd.to_datetime(df['datetime'], format='%d/%b/%Y:%H:%M:%S %z')
+    
+    # Map the 'Request' column to event IDs
+    df['EventId'] = df['Request'].apply(lambda r: event_id_map.get(r, -1))
+    
+    # Keep only relevant columns
     df = df[['datetime', 'EventId']]
-    df['EventId'] = df['EventId'].apply(lambda e: event_id_map[e] if event_id_map.get(e) else -1)
+    
+    # Resample the data to 1-minute intervals and apply custom resampling
     deeplog_df = df.set_index('datetime').resample('1min').apply(_custom_resampler).reset_index()
     return deeplog_df
+
 
 
 def _custom_resampler(array_like):
@@ -34,10 +42,10 @@ if __name__ == '__main__':
     ##########
     # Parser #
     ##########
-    input_dir = './data/OpenStack/'
-    output_dir = './openstack_result/'
-    log_format = '<Logrecord> <Date> <Time> <Pid> <Level> <Component> \[<ADDR>\] <Content>'
-    log_main = 'open_stack'
+    input_dir = './data/WebServer/'
+    output_dir = './Result/'
+    log_format = '<IP> - - [<Date>:<Time> <Timezone>] "<Request>" <Status> <Size> "<Referrer>" "<UserAgent>"'
+    log_main = 'web_server'
     tau = 0.5
 
     parser = spell.LogParser(
@@ -51,18 +59,18 @@ if __name__ == '__main__':
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    for log_name in ['openstack_abnormal.log', 'openstack_normal2.log', 'openstack_normal1.log']:
+    for log_name in ['acessnorm1.log', 'acessnorm2.log', 'oacessabnorm.log']:
         parser.parse(log_name)
 
     ##################
     # Transformation #
     ##################
-    df = pd.read_csv(f'{output_dir}/openstack_normal1.log_structured.csv')
-    df_normal = pd.read_csv(f'{output_dir}/openstack_normal2.log_structured.csv')
-    df_abnormal = pd.read_csv(f'{output_dir}/openstack_abnormal.log_structured.csv')
+    df = process_log_file(f'{output_dir}/acessnormal1.log')
+    df_normal = process_log_file(f'{output_dir}/acessnorm2.log')
+    df_abnormal = process_log_file(f'{output_dir}/acessabnorm.log')
 
     event_id_map = dict()
-    for i, event_id in enumerate(df['EventId'].unique(), 1):
+    for i, event_id in enumerate(pd.concat([df, df_normal, df_abnormal])['Request'].unique(), 1):
         event_id_map[event_id] = i
 
     logger.info(f'length of event_id_map: {len(event_id_map)}')
